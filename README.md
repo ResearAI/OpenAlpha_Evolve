@@ -167,25 +167,65 @@ Want to challenge OpenAlpha_Evolve with a new problem? It's easy! You can define
 Create a YAML file in the `examples` directory with the following structure:
 
 ```yaml
-task_id: "your_task_id"
+task_id: "aisp_llm_finetune_output_simple_001" # 对应输入的示例 ID
 task_description: |
-  Your detailed problem description here.
-  Be specific about function names, expected behavior, and constraints.
-function_name: "your_function_name"
-allowed_imports: ["module1", "module2"]
+  简化版 AISP 输出示例：LLM 微调与评估结果。
+  包含了微调后模型的引用、在验证集（或测试集）上的主要性能指标。
 
-tests:
-  - description: "Test group description"
-    name: "Test group name"
-    test_cases:
-        input: [arg1, arg2]  # List of arguments
-        output: expected_output  # Expected result
-        # Use either output or validation_func.
-        input: [arg1, arg2]
-        validation_func: |
-          def validate(output):
-              # Custom validation logic
-              return condition
+aisp_payload:
+  task_id: "LLM_Finetune_Summarization_Qwen2_001" # 本次微调任务的唯一ID
+  research_context:
+    domain: "自然语言生成 - 文本摘要"
+    objective: "微调 Qwen2-7B 模型，以提高其在新闻文章摘要任务上的 ROUGE-L 分数。"
+    # background_knowledge: (可选, 此处留空)
+    # constraints: (可选, 如最大训练时长、GPU型号限制等)
+  input_data:
+    base_model_id: "qwen/Qwen2-7B-Instruct" # 基础模型标识 (例如 Hugging Face Hub ID)
+    dataset_references: # 数据集引用 (可以是路径、URL或内部ID)
+      train_data: "s3://my-datasets/news_summarization/train.jsonl"
+      validation_data: "s3://my-datasets/news_summarization/validation.jsonl"
+      # test_data: (可选, 如果评估在另一独立步骤或使用验证集评估)
+  parameters:
+    fine_tuning_config:
+      learning_rate: 0.00001 # 例如 1e-5
+      batch_size_per_device: 4
+      num_train_epochs: 1 # 简化场景，只训练1个epoch
+      # optimizer: (可选, 默认为 AdamW)
+      # lr_scheduler_type: (可选, 默认为 linear)
+      # max_seq_length: (可选, 模型默认或根据数据调整) 512
+    evaluation_config:
+      metrics: ["rougeL", "bleu"] # 需要评估的指标
+      # evaluation_strategy: (可选, "epoch" 或 "steps") "epoch"
+      # eval_batch_size_per_device: (可选) 8
+    # early_stopping_config: (可选, 此处留空表示不使用早停)
+
+# AISP 通用输出格式的实际负载 (payload)
+aisp_payload:
+  task_id: "LLM_Finetune_Summarization_Qwen2_001" # 对应输入的任务ID
+  execution_id: "exec_qwen2_sum_ft_20250527_001" # 本次执行的唯一ID
+  result:
+    optimized_model_reference: # 优化后模型的引用
+      # model_id: (可选, 如果有内部模型注册库的ID) "Qwen2-7B-Summ-News-v1.0"
+      checkpoint_url: "s3://my-finetuned-models/Qwen2_7B_Summarization_001/checkpoint-final/"
+      # tokenizer_url: (可选, 如果分词器有变动或需单独提供) "s3://my-finetuned-models/Qwen2_7B_Summarization_001/tokenizer/"
+    performance_metrics: # 在验证集/测试集上的表现
+      rougeL: 0.452 # ROUGE-L F1 分数
+      bleu: 0.381
+      # validation_loss: (可选) 1.253
+      # other_metrics: (可选) {...}
+    summary_of_findings: |
+      Qwen2-7B 模型经过1个epoch的微调后，在新闻摘要任务的验证集上取得了 ROUGE-L 0.452 的分数。
+      初步结果显示模型对摘要任务有一定的适应性提升。
+    # training_duration_hours: (可选) 2.5
+    # full_logs_url: (可选) "s3://my-training-logs/Qwen2_7B_Summarization_001/all_logs.txt"
+  confidence: 0.90 # (可选) 模块对本次结果有效性的置信度
+  metadata:
+    processing_time_seconds: 9000 # 总处理时长 (例如 2.5 小时)
+    # resources_used: (可选, 简化版可省略详细资源，如GPU型号、数量等)
+    # intermediate_steps_summary: (可选, 简化版可省略详细步骤)
+    #   - "Data loading and preprocessing completed."
+    #   - "Fine-tuning epoch 1/1 completed."
+    #   - "Evaluation on validation set completed."
 ```
 
 See the example in examples/shortest_path.yaml
